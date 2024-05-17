@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 from datetime import datetime
-from src.models import User, Organization
-from src.schemas import RegisterRequestSchema, LoginRequestSchema, organizations_schema, organization_schema
+from src.models import User, Organization, Requirement
+from src.schemas import RegisterRequestSchema, LoginRequestSchema, organizations_schema, organization_schema, requirement_schema, requirements_schema
 from src.helpers import generate_access_token, construct_response, log
 from src.decorators import validate_marshmallow_schema, jwt_required
 
@@ -9,6 +9,7 @@ from src.decorators import validate_marshmallow_schema, jwt_required
 root_blueprint = Blueprint('root', __name__)
 user_blueprint = Blueprint('users', __name__, url_prefix='/user')
 organization_blueprint = Blueprint('organization', __name__, url_prefix='/organization')
+requirement_blueprint = Blueprint('requirement', __name__, url_prefix='/requirement')
 
 ## Routes ##
 @user_blueprint.route('/register', methods=['POST'])
@@ -110,4 +111,67 @@ def update_organization(user_id, id):
     except Exception as e:
         log(e)
         return construct_response("Organization update failed", 500, e)
+
+
+### Requirement Routes ###
+@requirement_blueprint.route('/', methods=['POST'])
+@validate_marshmallow_schema(requirement_schema)
+@jwt_required
+def create_requirement():
+    try:
+        data = requirement_schema.load(request.get_json())
+        new_requirement = Requirement(**data)
+        new_requirement.save()
+        return construct_response('Requirement created successfully', 201, requirement_schema.dump(new_requirement))
+    except Exception as e:
+        log(e)
+        return construct_response("Requirement creation failed", 500, e)
+    
+@requirement_blueprint.route('/', methods=['GET'])
+def get_requirements():
+    try:
+        org_id = request.args.get('organization')
+        if org_id:
+            requirements = Requirement.query.filter_by(organization_id=org_id).all()
+        else:
+            requirements = Requirement.query.all()
+        return construct_response('Requirements retrieved successfully', 200, requirements_schema.dump(requirements))
+    except Exception as e:
+        log(e)
+        return construct_response("Requirement retrieval failed", 500, e)
+    
+@requirement_blueprint.route('/<int:id>', methods=['PUT'])
+@validate_marshmallow_schema(requirement_schema)
+@jwt_required
+def update_requirement(user_id, id):
+    try:
+        requirement = Requirement.query.get_or_404(id)
+        if Organization.query.get_or_404(requirement.organization_id).created_by != user_id:
+            return construct_response('You are not authorized to update this requirement', 401)
+        
+        data = requirement_schema.load(request.get_json())
+        requirement.description = data['description']
+        requirement.quantity = data['quantity']
+        requirement.updated_at = datetime.utcnow()
+
+        requirement.save()
+
+        return construct_response('Requirement updated successfully', 200, requirement_schema.dump(requirement))
+    except Exception as e:
+        log(e)
+        return construct_response("Requirement update failed", 500, e)
+    
+@requirement_blueprint.route('/<int:id>', methods=['DELETE'])
+@jwt_required
+def delete_requirement(user_id, id):
+    try:
+        requirement = Requirement.query.get_or_404(id)
+        if Organization.query.get_or_404(requirement.organization_id).created_by != user_id:
+            return construct_response('You are not authorized to delete this requirement', 401)
+        
+        requirement.delete()
+        return construct_response('Requirement deleted successfully', 200)
+    except Exception as e:
+        log(e)
+        return construct_response("Requirement deletion failed", 500, e)
 

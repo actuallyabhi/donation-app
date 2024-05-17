@@ -24,5 +24,19 @@ class OrganizationSchema(Schema):
 organization_schema = OrganizationSchema()
 organizations_schema = OrganizationSchema(many=True)
 
+class RequirementSchema(Schema):
+    id = fields.Int(dump_only=True)
+    title = fields.Str(required=True, validate=validate.Length(max=160))
+    description = fields.Str(required=True, validate=validate.Length(max=1000))
+    quantity = fields.Int(required=True)
+    status_id = fields.Int(required=True)
+    type_id = fields.Int(required=True)
+    organization_id = fields.Int(required=True)
+    created_at = fields.DateTime(dump_only=True)
+    updated_at = fields.DateTime(dump_only=True)
+
+requirement_schema = RequirementSchema()
+requirements_schema = RequirementSchema(many=True)
+
 
 

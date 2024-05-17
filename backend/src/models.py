@@ -118,7 +118,8 @@ class Requirement(db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     type_id = db.Column(db.Integer, db.ForeignKey('type.id'), nullable=False)
     status_id = db.Column(db.Integer, db.ForeignKey('status.id'), nullable=False)
-    description = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.String(160), nullable=False)
+    description = db.Column(db.String(1000), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     deadline = db.Column(db.DateTime)
     percent_complete = db.Column(db.Integer, nullable=False, default=0)
@@ -151,6 +152,7 @@ class Requirement(db.Model):
                 'id': self.status_id,
                 'name': Status.query.get(self.status_id).name
             },
+            'title': self.title,
             'description': self.description,
             'quantity': self.quantity,
             'created_at': self.created_at,
